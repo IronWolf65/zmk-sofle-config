@@ -1,0 +1,143 @@
+/*
+* pro_micro == D
+* nrf       == gpio
+*                    _________________________
+*                    |o B+               B- o|
+*                    |o RAW             006 o| gpio0 6  D1    LED
+*                    |o GND             008 o| gpio0 8  D0    DATA
+*                    |o RST             GND o|
+*                    |o VCC             GND o|
+* ENCA  D21 gpio0 31 |o 031             017 o| gpio0 17 D2    SDA
+* ENCB  D20 gpio0 29 |o 029  NRF52840   020 o| gpio0 20 D3    SCL
+* COL0  D19 gpio0 2  |o 002             022 o| gpio0 22 D4    
+* COL1  D18 gpio1 15 |o 115             024 o| gpio0 24 D5    ROW0
+* COL2  D15 gpio1 13 |o 113 o VDD 1 1 1 100 o| gpio1 0  D6    ROW1
+* COL3  D14 gpio1 11 |o 111 o DIO 0 0 0 011 o| gpio0 11 D7    ROW2
+* COL4  D16 gpio0 10 |o 010 o CLK 7 2 1 104 o| gpio1 4  D8    ROW3
+* SW25A D10 gpio0 9  |o 009 o GND o o o 106 o| gpio1 6  D9    ROW4
+*                    -------------------------
+*                                 | | \ gpio1 1
+*                                 | \__ gpio1 2 RST
+*                                 \____ gpio1 7 RDY
+*/
+
+#include <dt-bindings/zmk/matrix_transform.h>
+#include <dt-bindings/led/led.h>
+#include <layouts/josefadamcik/sofle.dtsi>
+#include "pinctrl.dtsi"
+
+&josefadamcik_sofle_layout {
+    transform = <&default_transform>;
+};
+
+/ {
+    chosen {
+        zmk,kscan = &kscan0;
+        zmk,battery = &vbatt;
+        zmk,underglow = &led_strip;
+        zephyr,display = &oled;
+    };
+
+    default_transform: keymap_transform_0 {
+        compatible = "zmk,matrix-transform";
+        columns = <16>;
+        rows = <4>;
+// | SW6  | SW5  | SW4  | SW3  | SW2  | SW1  |                 | SW1  | SW2  | SW3  | SW4  | SW5  | SW6  |
+// | SW12 | SW11 | SW10 | SW9  | SW8  | SW7  |                 | SW7  | SW8  | SW9  | SW10 | SW11 | SW12 |
+// | SW18 | SW17 | SW16 | SW15 | SW14 | SW13 |                 | SW13 | SW14 | SW15 | SW16 | SW17 | SW18 |
+// | SW24 | SW23 | SW22 | SW21 | SW20 | SW19 | SW25 |   | SW25 | SW19 | SW20 | SW21 | SW22 | SW23 | SW24 |
+//               | SW30 | SW29 | SW28 | SW27 | SW26 |   | SW26 | SW27 | SW28 | SW29 | SW30 |
+        map = <
+RC(0,0) RC(0,1) RC(0,2) RC(0,3) RC(0,4) RC(0,5)                 RC(0,6) RC(0,7) RC(0,8)  RC(0,9) RC(0,10) RC(0,11)
+RC(1,0) RC(1,1) RC(1,2) RC(1,3) RC(1,4) RC(1,5)                 RC(1,6) RC(1,7) RC(1,8)  RC(1,9) RC(1,10) RC(1,11)
+RC(2,0) RC(2,1) RC(2,2) RC(2,3) RC(2,4) RC(2,5)                 RC(2,6) RC(2,7) RC(2,8)  RC(2,9) RC(2,10) RC(2,11)
+RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(4,5) RC(4,6) RC(3,6) RC(3,7) RC(3,8)  RC(3,9) RC(3,10) RC(3,11)
+                RC(4,0) RC(4,1) RC(4,2) RC(4,3) RC(4,4) RC(4,7) RC(4,8) RC(4,9) RC(4,10) RC(4,11)
+        >;
+    };
+
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-matrix";
+        wakeup-source;
+
+        diode-direction = "col2row";
+        row-gpios
+            = <&gpio0 24 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
+              <&gpio1 0  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
+              <&gpio0 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
+              <&gpio1 4  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,
+              <&gpio1 6  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+    };
+
+// Encoder
+
+    left_encoder: encoder_left {
+        compatible = "alps,ec11";
+        a-gpios = <&gpio0 31 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        b-gpios = <&gpio0 29 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
+        steps = <80>; // realStep*4
+        status = "disabled";
+    };
+
+    sensors: sensors {
+        compatible = "zmk,keymap-sensors";
+        sensors = <&left_encoder>;
+        triggers-per-rotation = <20>; // realStep
+    };
+
+    vbatt: vbatt {
+        compatible = "zmk,battery-nrf-vddh";
+    };
+};
+
+&spi3 {
+    compatible = "nordic,nrf-spim";
+    status = "okay";
+
+    pinctrl-0 = <&spi3_default>;
+    pinctrl-1 = <&spi3_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    led_strip: ws2812@0 {
+        compatible = "worldsemi,ws2812-spi";
+
+        /* SPI */
+        reg = <0>; /* ignored, but necessary for SPI bindings */
+        spi-max-frequency = <4000000>;
+
+        /* WS2812 */
+        chain-length = <36>; /* arbitrary; change at will */
+        spi-one-frame = <0x70>;
+        spi-zero-frame = <0x40>;
+
+        color-mapping = <
+            LED_COLOR_ID_GREEN
+            LED_COLOR_ID_RED
+            LED_COLOR_ID_BLUE
+        >;
+    };
+};
+
+&i2c0 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_FAST>;
+    pinctrl-0 = <&i2c0_default>;                        /* Configuration for SDA and SCL */
+    pinctrl-1 = <&i2c0_sleep>;                          /* Configuration for SDA and SCL */
+    pinctrl-names = "default", "sleep";
+    
+    oled: ssd1306@3c {
+        compatible = "solomon,ssd1306fb";
+        reg = <0x3c>;
+        width = <128>;
+        height = <32>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <31>;
+        segment-remap;
+        com-invdir;
+        com-sequential;
+        inversion-on;
+        prechargep = <0x22>;
+    };
+};

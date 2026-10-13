@@ -1,0 +1,23 @@
+manifest:
+  remotes:
+    - name: zmkfirmware
+      url-base: https://github.com/zmkfirmware
+      ####
+    - name: mctechnology17
+      url-base: https://github.com/mctechnology17
+    - name: geeksville
+      url-base: https://github.com/geeksville
+  projects:
+    - name: zmk
+      remote: zmkfirmware
+      revision: v0.3
+      import: app/west.yml
+      ####
+    - name: zmk-nice-oled
+      remote: mctechnology17
+      revision: main
+    - name: zmk_driver_azoteq
+      remote: geeksville
+      revision: master
+  self:
+    path: config

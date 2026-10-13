@@ -1,0 +1,9 @@
+services:
+  zmk-build:
+    image: ${ZMK_IMAGE:?ZMK_IMAGE is not set}
+    working_dir: /workspace/config-repo
+    volumes:
+      - .:/workspace/config-repo
+      - ./zmk-workspace:/workspace/west-workspace
+      - ./output:/workspace/output
+    command: python3 /workspace/config-repo/scripts/build.py

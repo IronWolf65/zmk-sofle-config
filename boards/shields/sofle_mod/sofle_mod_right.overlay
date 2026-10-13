@@ -1,0 +1,91 @@
+/*
+* pro_micro == D
+* nrf       == gpio
+*                    _________________________
+*                    |o B+               B- o|
+*                    |o RAW             006 o| gpio0 6  D1    LED
+*                    |o GND             008 o| gpio0 8  D0    DATA
+*                    |o RST             GND o|
+*                    |o VCC             GND o|
+* ENCA  D21 gpio0 31 |o 031             017 o| gpio0 17 D2    SDA
+* ENCB  D20 gpio0 29 |o 029  NRF52840   020 o| gpio0 20 D3    SCL
+* COL0  D19 gpio0 2  |o 002             022 o| gpio0 22 D4    
+* COL1  D18 gpio1 15 |o 115             024 o| gpio0 24 D5    ROW0
+* COL2  D15 gpio1 13 |o 113 o VDD 1 1 1 100 o| gpio1 0  D6    ROW1
+* COL3  D14 gpio1 11 |o 111 o DIO 0 0 0 011 o| gpio0 11 D7    ROW2
+* COL4  D16 gpio0 10 |o 010 o CLK 7 2 1 104 o| gpio1 4  D8    ROW3
+* SW25A D10 gpio0 9  |o 009 o GND o o o 106 o| gpio1 6  D9    ROW4
+*                    -------------------------
+*                                 | | \ gpio1 1
+*                                 | \__ gpio1 2 RST
+*                                 \____ gpio1 7 RDY
+*/
+
+#include "sofle.dtsi"
+
+&default_transform {
+    col-offset = <6>;
+};
+
+&kscan0 {
+    col-gpios
+        = <&gpio0 9  GPIO_ACTIVE_HIGH>
+        , <&gpio0 10 GPIO_ACTIVE_HIGH>
+        , <&gpio1 11 GPIO_ACTIVE_HIGH>
+        , <&gpio1 13 GPIO_ACTIVE_HIGH>
+        , <&gpio1 15 GPIO_ACTIVE_HIGH>
+        , <&gpio0 2  GPIO_ACTIVE_HIGH>
+        ;
+};
+
+&i2c0 {
+    tps43_trackpad: trackpad@74 {
+        compatible = "azoteq,tps43";
+        reg = <0x74>;
+        status = "okay";
+        
+        /* GPIO connections */
+        rst-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;        /* RST pin */
+        rdy-gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;        /* RDY pin */
+
+        enable-power-management;
+        idle-sleep;                                     /* also sleep the trackpad while ZMK is idle */
+        report-rate-lp2 = <640>;
+        
+        sensitivity = <50>;                             /* def 100% = normal state */
+        scroll-sensitivity = <20>;                      /* def 50% = normal state  */
+        zoom-sensitivity = <50>;                        /* def 50% = normal state  */
+        
+        hold-time = <300>;
+
+        filter-settings=<0x0B>;                         /* See filter description in `available settings` */
+        x-resolution=<2048>;                            /* X resolution in pixels */
+        y-resolution=<1792>;                            /* Y resolution in pixels */
+
+        single-tap;
+        two-finger-tap;
+        three-finger-swipe;                             /* 3-finger swipe only, without enabling 1-finger swipe (optional) */
+        three-finger-swipe-throttle-ms=<300>;           /* Min ms between 3-finger swipe actuations, 0 disables (optional, default 300) */
+        
+        scroll;
+        press-and-hold;
+        swipes;
+        zoom;
+
+        switch-xy;
+        invert-scroll-y;
+    };
+};
+
+/ {
+    split_inputs {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        tps43_split: tps43_split@0 {
+            compatible = "zmk,input-split";
+            reg = <0>;
+            device = <&tps43_trackpad>;
+        };
+    };
+};

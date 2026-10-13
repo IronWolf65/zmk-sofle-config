@@ -1,0 +1,5 @@
+config SHIELD_SOFLE_MOD_LEFT
+    def_bool $(shields_list_contains,sofle_mod_left)
+
+config SHIELD_SOFLE_MOD_RIGHT
+    def_bool $(shields_list_contains,sofle_mod_right)

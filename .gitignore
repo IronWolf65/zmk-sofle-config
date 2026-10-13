@@ -1,0 +1,4 @@
+output/
+scripts/__pycache__/
+zmk-workspace/
+.DS_Store
